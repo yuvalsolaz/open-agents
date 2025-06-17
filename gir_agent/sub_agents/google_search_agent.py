@@ -1,7 +1,6 @@
 # gir_agent/sub_agents/Google Search_agent.py
 from google.adk.agents import Agent
-from google.adk.tools import google_search
-from config import LLM_MODEL
+from google.adk.tools import google_searchg
 
 
 
