@@ -1,0 +1,6 @@
+[project]
+name = "gir_agent"
+version = "0.1.2"
+# Setuptools will now auto-discover your gir agent package.
+[tool.adk.agents]
+gir_agent = "gir_agent.agent:root_agent"
