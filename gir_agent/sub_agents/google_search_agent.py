@@ -41,7 +41,7 @@ Snippet: [Snippet text of the second search result]
 
 
 google_search_agent = Agent(
-    model=LLM_MODEL,
+    model="gemini-2.5-pro-preview-05–06",
     name="google_search_agent",
     description="An expert at using google_search to find recent information and return a structured list of results including URLs.",
     # We assign the new, structured instruction here.

@@ -1,6 +1,10 @@
 # gir_agent/agent.py
 from google.adk.agents import LlmAgent
 from google.adk.tools.agent_tool import AgentTool
+# from litellm import LiteLLM
+# @title 1. Import LiteLlm
+from google.adk.models.lite_llm import LiteLlm
+
 # Import the sub-agent INSTANCES
 from .sub_agents.google_search_agent import google_search_agent
 from .sub_agents.osm_agent import osm_agent
@@ -9,7 +13,7 @@ from config import LLM_MODEL
 
 # This is our main "manager" agent, now an LlmAgent
 root_agent = LlmAgent(
-        model=LLM_MODEL,
+        model=LiteLlm(model=LLM_MODEL),
         name="GIROrchestrator",
         description="The manager of a team of specialist AI agents.",
         instruction=prompt.ORCHESTRATOR_PROMPT,
