@@ -1,6 +1,6 @@
 # gir_agent/sub_agents/Google Search_agent.py
 from google.adk.agents import Agent
-from google.adk.tools import google_searchg
+from google.adk.tools import google_search
 
 
 
@@ -40,7 +40,7 @@ Snippet: [Snippet text of the second search result]
 
 
 google_search_agent = Agent(
-    model="gemini-2.5-pro-preview-05–06",
+    model="gemini-2.5-flash",
     name="google_search_agent",
     description="An expert at using google_search to find recent information and return a structured list of results including URLs.",
     # We assign the new, structured instruction here.
