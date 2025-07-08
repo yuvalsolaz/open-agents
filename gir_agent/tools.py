@@ -18,8 +18,8 @@ def geo_coding(query: str, ) -> list[str]:
         if not entities:
             return []
         results = "\n".join([f"{l.raw['name']} : {l.raw['addresstype']}" for l in entities])
-        print(f"entities:{results}")       
-        return results
+        print("\n".join([l.raw['name'] for l in entities]))       
+        return results 
 
 
     except Exception as e:
