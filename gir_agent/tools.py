@@ -17,11 +17,10 @@ def geo_coding(query: str, ) -> list[str]:
         entities = geolocator.geocode(query=query, exactly_one=False, timeout=10, geometry='geojson')
         if not entities:
             return []
+        results = "\n".join([f"{l.raw['name']} : {l.raw['addresstype']}" for l in entities])
+        print(f"entities:{results}")       
+        return results
 
-        print("entities:")
-        print("\n".join([f"{l.raw['name']} : {l.raw['addresstype']}" for l in entities]))
-
-        return entities
 
     except Exception as e:
         print(f"Error in geocoding: {str(e)}")
