@@ -2,3 +2,6 @@ google-adk
 python-dotenv
 geopy
 litellm
+fastapi
+uvicorn
+httpx
