@@ -1,7 +1,7 @@
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 from gir_agent.tools import geo_coding
-from config import LLM_MODEL
+from gir_agent.config import LLM_MODEL
 
 osm_agent = Agent(
     name="osm_agent",
