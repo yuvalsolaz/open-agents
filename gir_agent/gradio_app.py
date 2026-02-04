@@ -144,8 +144,8 @@ def build_ui() -> gr.Blocks:
         )
 
         with gr.Row():
-            # Use messages format to satisfy gradio v4 Chatbot expectations.
-            chatbot = gr.Chatbot(height=480, type="messages")
+            # Chatbot expects list of {role, content} messages in Gradio 6.x.
+            chatbot = gr.Chatbot(height=480)
             map_view = gr.HTML(value=_fallback_map(), label="Latest Map")
 
         with gr.Row():
