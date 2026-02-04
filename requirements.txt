@@ -6,3 +6,4 @@ fastapi
 uvicorn
 httpx
 folium
+gradio
