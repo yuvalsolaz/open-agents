@@ -49,6 +49,9 @@ def _load_map_html() -> str:
 
     state: dict[str, Any] = getattr(_session, "state", {}) or {}
     map_path = state.get("user:last_geo_map_path")
+    if not map_path:
+        map_path = _discover_latest_map_path()
+
     if map_path:
         file = Path(map_path)
         if file.exists():
@@ -69,6 +72,18 @@ def _fallback_map(message: str | None = None) -> str:
         "border-radius:12px;background:#fafafa;font-family:Inter, sans-serif;\">"
         f"<strong>Map</strong><br><span>{html_lib.escape(note)}</span></div>"
     )
+
+
+def _discover_latest_map_path() -> str | None:
+    """Find the most recent map HTML saved under build/maps when state is missing."""
+
+    maps_dir = Path.cwd() / "build" / "maps"
+    if not maps_dir.exists():
+        return None
+    html_files = sorted(
+        maps_dir.glob("geo_map_*.html"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
+    return str(html_files[0]) if html_files else None
 
 
 async def _ensure_session() -> None:
