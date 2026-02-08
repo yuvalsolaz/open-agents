@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
 from google.adk.runners import Runner
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
+from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.genai import types
 
 from gir_agent.agent import root_agent
@@ -541,6 +542,7 @@ async def chat(payload: Dict[str, str]) -> JSONResponse:
             user_id=_session.user_id,
             session_id=_session.id,
             new_message=types.Content(role="user", parts=[types.Part(text=message)]),
+            run_config=RunConfig(streaming_mode=StreamingMode.SSE),
         ):
             text = _extract_text(event)
             if text:
