@@ -180,10 +180,14 @@ async def respond_stream(message: str, history: List[dict[str, str]]):
             text = _extract_text(event)
             if not text:
                 continue
-            assistant_entry["content"] += text
-            _append_log(f"{author}: {text}")
-            # Stream partial assistant text; map refresh at end of loop
-            yield history, _load_map_html(), _format_logs()
+            # Prefer token/partial deltas; fall back to full text replacement.
+            existing = assistant_entry["content"]
+            addition = text[len(existing) :] if text.startswith(existing) else text
+            if addition:
+                assistant_entry["content"] = existing + addition
+                _append_log(f"{author}: {addition}")
+                # Stream partial assistant text; map refresh at end of loop
+                yield history, _load_map_html(), _format_logs()
 
     # Final yield ensures map is latest after run finishes
     yield history, _load_map_html(), _format_logs()
