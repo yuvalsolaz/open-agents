@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import asyncio
 import html as html_lib
+import logging
+from collections import deque
+from datetime import datetime
 from pathlib import Path
 from typing import Any, List, Tuple
 
@@ -29,6 +32,32 @@ _session_service = InMemorySessionService()
 _session = None
 _runner: Runner | None = None
 _lock = asyncio.Lock()
+_logs: deque[str] = deque(maxlen=500)
+
+
+def _append_log(line: str) -> None:
+    """Append a timestamped log line to the in-memory buffer."""
+
+    ts = datetime.utcnow().strftime("%H:%M:%S")
+    _logs.append(f"[{ts}] {line}")
+
+
+def _format_logs() -> str:
+    if not _logs:
+        return "No server logs yet."
+    return "\n".join(_logs)
+
+
+class _BufferLogHandler(logging.Handler):
+    """In-memory log handler used to surface server logs in the UI."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        message = self.format(record)
+        _append_log(message)
+
+
+# Capture INFO+ logs from the root logger so we surface operational details.
+logging.basicConfig(level=logging.INFO, handlers=[_BufferLogHandler()])
 
 
 def _escape_for_iframe(doc: str) -> str:
@@ -115,9 +144,11 @@ async def _chat_once(message: str) -> Tuple[str, str]:
             session_id=_session.id,
             new_message=types.Content(role="user", parts=[types.Part(text=message)]),
         ):
+            author = getattr(event, "author", "server")
             text = _extract_text(event)
             if text:
                 reply = text
+                _append_log(f"{author}: {text}")
 
     map_html = _load_map_html()
     return reply, map_html
@@ -129,21 +160,39 @@ def _extract_text(event) -> str:
     return "".join(part.text or "" for part in event.content.parts)
 
 
-async def respond(message: str, history: List[dict[str, str]]):
-    """Gradio handler: update chat history (role/content pairs) and map."""
+async def respond_stream(message: str, history: List[dict[str, str]]):
+    """Stream assistant messages to the chatbot while the agent runs."""
 
-    reply, map_html = await _chat_once(message)
-    history = history + [
-        {"role": "user", "content": message},
-        {"role": "assistant", "content": reply},
-    ]
-    return history, map_html
+    _append_log(f"user: {message}")
+    history = history + [{"role": "user", "content": message}]
+    assistant_entry = {"role": "assistant", "content": ""}
+    history.append(assistant_entry)
+
+    await _ensure_session()
+    async with _lock:
+        assert _runner is not None and _session is not None
+        async for event in _runner.run_async(
+            user_id=_session.user_id,
+            session_id=_session.id,
+            new_message=types.Content(role="user", parts=[types.Part(text=message)]),
+        ):
+            author = getattr(event, "author", "server")
+            text = _extract_text(event)
+            if not text:
+                continue
+            assistant_entry["content"] += text
+            _append_log(f"{author}: {text}")
+            # Stream partial assistant text; map refresh at end of loop
+            yield history, _load_map_html(), _format_logs()
+
+    # Final yield ensures map is latest after run finishes
+    yield history, _load_map_html(), _format_logs()
 
 
 async def refresh_map(history: List[dict[str, str]]):
     """Refresh only the map panel without sending a new message."""
 
-    return history, _load_map_html()
+    return history, _load_map_html(), _format_logs()
 
 
 def build_ui() -> gr.Blocks:
@@ -172,10 +221,26 @@ def build_ui() -> gr.Blocks:
             send_btn = gr.Button("Send", variant="primary")
             refresh_btn = gr.Button("Refresh Map")
 
-        send_btn.click(respond, inputs=[msg, chatbot], outputs=[chatbot, map_view])
-        msg.submit(respond, inputs=[msg, chatbot], outputs=[chatbot, map_view])
+        with gr.Row():
+            log_box = gr.Textbox(
+                label="Server Logs",
+                value=_format_logs(),
+                lines=12,
+                interactive=False,
+            )
+
+        send_btn.click(
+            respond_stream,
+            inputs=[msg, chatbot],
+            outputs=[chatbot, map_view, log_box],
+        )
+        msg.submit(
+            respond_stream, inputs=[msg, chatbot], outputs=[chatbot, map_view, log_box]
+        )
         msg.submit(lambda: "", None, msg)  # clear after submit
-        refresh_btn.click(refresh_map, inputs=[chatbot], outputs=[chatbot, map_view])
+        refresh_btn.click(
+            refresh_map, inputs=[chatbot], outputs=[chatbot, map_view, log_box]
+        )
 
     return demo
 
