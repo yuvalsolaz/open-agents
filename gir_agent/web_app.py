@@ -23,7 +23,8 @@ _session_service = InMemorySessionService()
 _session = None
 _runner = None
 _lock = asyncio.Lock()
-_proxy_base = "https://basemap.nationalmap.gov/arcgis/services/USGSHydroCached/MapServer/WMSServer"
+
+_proxy_base = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/?callback=loadJsonp905915&f=json'
 
 
 def _extract_text(event) -> str:
@@ -451,7 +452,7 @@ async def index() -> str:
     });
 
     const provider = new Cesium.WebMapServiceImageryProvider({
-      url: 'https://basemap.nationalmap.gov:443/arcgis/services/USGSHydroCached/MapServer/WMSServer',
+      url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/?callback=loadJsonp905915&f=json',
       layers: '0',
       proxy: new Cesium.DefaultProxy('/proxy/')
     });
@@ -459,6 +460,27 @@ async def index() -> str:
     viewer.imageryLayers.add(imageryLayer);
 
     let geoSource = null;
+    let didFirstLocationZoomOut = false;
+
+    function firstPointFromGeoJson(geojson) {
+      const features = geojson && Array.isArray(geojson.features) ? geojson.features : [];
+      for (const feature of features) {
+        const geometry = feature && feature.geometry ? feature.geometry : null;
+        if (!geometry) continue;
+
+        if (geometry.type === 'Point' && Array.isArray(geometry.coordinates) && geometry.coordinates.length >= 2) {
+          return geometry.coordinates;
+        }
+
+        if (geometry.type === 'MultiPoint' && Array.isArray(geometry.coordinates) && geometry.coordinates.length) {
+          const point = geometry.coordinates[0];
+          if (Array.isArray(point) && point.length >= 2) {
+            return point;
+          }
+        }
+      }
+      return null;
+    }
 
     async function refreshMap() {
       try {
@@ -473,7 +495,18 @@ async def index() -> str:
         });
         viewer.dataSources.add(geoSource);
         if (geojson.features && geojson.features.length) {
-          viewer.flyTo(geoSource);
+          const firstPoint = firstPointFromGeoJson(geojson);
+          if (!didFirstLocationZoomOut && firstPoint) {
+            const [lon, lat] = firstPoint;
+            const destination = Cesium.Cartesian3.fromDegrees(lon, lat, 25000.0);
+            viewer.camera.flyTo({
+              destination,
+              duration: 1.5
+            });
+            didFirstLocationZoomOut = true;
+          } else {
+            viewer.flyTo(geoSource);
+          }
         }
       } catch (err) {
         // keep quiet; chat still works
