@@ -61,7 +61,7 @@ async def visualize_geojson(tool_context: ToolContext) -> dict[str, Any]:
 
     The function expects GeoJSON to be present in the tool context (commonly
     under `state['geo_json']` or `state['user:geo_json']`). The map is saved to
-    `build/maps` and also attached to the current session as an HTML artifact.
+    `/maps` and also attached to the current session as an HTML artifact.
 
     Returns a small dict with the local file path and artifact version.
     """
@@ -102,7 +102,7 @@ async def visualize_geojson(tool_context: ToolContext) -> dict[str, Any]:
     fmap.add_child(folium.LayerControl())
 
     # Persist to disk
-    output_dir = Path.cwd() / "build" / "maps"
+    output_dir = Path.cwd() / "maps"
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     filename = f"geo_map_{timestamp}.html"
