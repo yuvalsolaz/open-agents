@@ -213,7 +213,7 @@ async def index() -> str:
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      min-height: 100vh;
+      height: 100vh;
       display: grid;
       place-items: center;
       font-family: "Space Grotesk", system-ui, sans-serif;
@@ -222,10 +222,13 @@ async def index() -> str:
                   radial-gradient(700px circle at 90% 10%, #1a3d4a 0%, transparent 45%),
                   linear-gradient(120deg, var(--bg), var(--bg-2));
       padding: 32px 16px;
+      overflow: hidden;
     }
 
     .shell {
       width: min(1200px, 100%);
+      height: calc(100vh - 64px);
+      max-height: 100%;
       background: var(--panel);
       border-radius: 24px;
       padding: 28px;
@@ -233,6 +236,9 @@ async def index() -> str:
       border: 1px solid rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(16px);
       animation: fadeUp 0.8s ease both;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
     }
 
     header {
@@ -257,11 +263,22 @@ async def index() -> str:
     .layout {
       display: grid;
       grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.2fr);
+      grid-template-rows: minmax(0, 1fr);
       gap: 20px;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .chat-shell {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto auto;
+      height: 100%;
+      min-height: 0;
     }
 
     .chat {
-      height: min(55vh, 520px);
+      height: 100%;
+      min-height: 0;
       overflow-y: auto;
       padding: 18px;
       background: rgba(8, 10, 24, 0.55);
@@ -298,7 +315,8 @@ async def index() -> str:
       background: rgba(8, 10, 24, 0.55);
       display: grid;
       grid-template-rows: auto 1fr;
-      min-height: 420px;
+      height: 100%;
+      min-height: 0;
     }
 
     .map-header {
@@ -324,7 +342,7 @@ async def index() -> str:
     #map {
       width: 100%;
       height: 100%;
-      min-height: 360px;
+      min-height: 0;
     }
 
     .composer {
@@ -389,9 +407,16 @@ async def index() -> str:
     }
 
     @media (max-width: 720px) {
-      .shell { padding: 20px; }
-      .layout { grid-template-columns: 1fr; }
-      .chat { height: 45vh; }
+      body { padding: 8px; }
+      .shell {
+        height: calc(100vh - 16px);
+        padding: 20px;
+      }
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+        height: 100%;
+      }
       .bubble { max-width: 92%; }
       .composer { grid-template-columns: 1fr; }
       button { height: 48px; }
@@ -406,7 +431,7 @@ async def index() -> str:
     </header>
 
     <section class=\"layout\">
-      <div>
+      <div class=\"chat-shell\">
         <main class=\"chat\" id=\"chat\"></main>
 
         <form class=\"composer\" id=\"composer\">
@@ -616,4 +641,4 @@ async def proxy(url: str, request: Request) -> Response:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("gir_agent.web_app:app", host="0.0.0.0", port=8008, reload=True)
+    uvicorn.run("gir_agent.web_app:app", host="0.0.0.0", port=8009, reload=True)

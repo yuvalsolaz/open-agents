@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import asyncio
 import html as html_lib
+import json
 import logging
 from collections import deque
 from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import gradio as gr
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
@@ -34,6 +35,10 @@ _session = None
 _runner: Runner | None = None
 _lock = asyncio.Lock()
 _logs: deque[str] = deque(maxlen=500)
+MAP_FRAME_HEIGHT_PX = 520
+CESIUM_IMAGERY_URL = (
+    "https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer?f=jsapi"
+)
 
 
 def _append_log(line: str) -> None:
@@ -66,9 +71,117 @@ def _escape_for_iframe(doc: str) -> str:
 
     escaped = html_lib.escape(doc)
     return (
-        "<iframe style=\"width:100%;height:520px;border:1px solid #d7d7e0;"
+        f"<iframe style=\"width:100%;height:{MAP_FRAME_HEIGHT_PX}px;border:1px solid #d7d7e0;"
         "border-radius:12px;\" srcdoc=\"" + escaped + "\"></iframe>"
     )
+
+
+def _looks_like_wkt(value: str) -> bool:
+    upper = value.strip().upper()
+    return upper.startswith(
+        (
+            "POINT",
+            "LINESTRING",
+            "POLYGON",
+            "MULTIPOINT",
+            "MULTILINESTRING",
+            "MULTIPOLYGON",
+        )
+    )
+
+
+def _collect_wkts(value: Any) -> List[str]:
+    if isinstance(value, str):
+        return [value] if _looks_like_wkt(value) else []
+    if isinstance(value, dict):
+        results: List[str] = []
+        for item in value.values():
+            results.extend(_collect_wkts(item))
+        return results
+    if isinstance(value, (list, tuple, set)):
+        results: List[str] = []
+        for item in value:
+            results.extend(_collect_wkts(item))
+        return results
+    return []
+
+
+def _wkt_to_geojson(value: str) -> Optional[Dict[str, Any]]:
+    from gir_agent.web_app import _wkt_to_geojson as _shared_wkt_to_geojson
+
+    return _shared_wkt_to_geojson(value)
+
+
+def _state_to_geojson(state: Dict[str, Any]) -> Dict[str, Any]:
+    wkts = _collect_wkts(state)
+    features = []
+    for wkt in wkts:
+        geometry = _wkt_to_geojson(wkt)
+        if geometry:
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": geometry,
+                    "properties": {},
+                }
+            )
+    return {"type": "FeatureCollection", "features": features}
+
+
+def _build_cesium_map_html(geojson: Dict[str, Any]) -> str:
+    encoded_geojson = json.dumps(geojson)
+    encoded_imagery_url = json.dumps(CESIUM_IMAGERY_URL)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://unpkg.com/cesium/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <style>
+    html, body, #map {{
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #0a0d16;
+    }}
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/cesium/Build/Cesium/Cesium.js"></script>
+  <script>
+    const viewer = new Cesium.Viewer('map', {{
+      imageryProvider: false,
+      baseLayerPicker: false,
+      geocoder: false,
+      timeline: false,
+      animation: false,
+      homeButton: false,
+      sceneModePicker: false,
+      navigationHelpButton: false,
+      selectionIndicator: false,
+      infoBox: false
+    }});
+
+    const provider = new Cesium.WebMapServiceImageryProvider({{
+      url: {encoded_imagery_url},
+      layers: '0'
+    }});
+    viewer.imageryLayers.add(new Cesium.ImageryLayer(provider));
+
+    const geojson = {encoded_geojson};
+    Cesium.GeoJsonDataSource.load(geojson, {{ clampToGround: true }})
+      .then((source) => {{
+        viewer.dataSources.add(source);
+        if (geojson.features && geojson.features.length) {{
+          viewer.flyTo(source);
+        }}
+      }})
+      .catch(() => {{}});
+  </script>
+</body>
+</html>"""
 
 
 def _load_map_html() -> str:
@@ -78,6 +191,10 @@ def _load_map_html() -> str:
         return _fallback_map()
 
     state: dict[str, Any] = getattr(_session, "state", {}) or {}
+    geojson = _state_to_geojson(state)
+    if geojson.get("features"):
+        return _escape_for_iframe(_build_cesium_map_html(geojson))
+
     map_path = state.get("user:last_geo_map_path")
     if not map_path:
         map_path = _discover_latest_map_path()
@@ -98,8 +215,9 @@ def _load_map_html() -> str:
 def _fallback_map(message: str | None = None) -> str:
     note = message or "No map available yet. Run a geo query to generate one."
     return (
-        "<div style=\"padding:18px;border:1px dashed #ccc;"
-        "border-radius:12px;background:#fafafa;font-family:Inter, sans-serif;\">"
+        f"<div style=\"height:{MAP_FRAME_HEIGHT_PX}px;padding:18px;border:1px dashed #ccc;"
+        "border-radius:12px;background:#fafafa;font-family:Inter, sans-serif;"
+        "display:flex;flex-direction:column;justify-content:center;\">"
         f"<strong>Map</strong><br><span>{html_lib.escape(note)}</span></div>"
     )
 
