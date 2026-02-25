@@ -1,7 +1,7 @@
 # adk
 .adk
 */session.db
-
+maps/*
 # Byte-compiled / optimized / DLL files
 .idea
 __pycache__/
