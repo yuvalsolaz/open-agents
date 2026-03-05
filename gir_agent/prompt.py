@@ -9,7 +9,7 @@ ORCHESTRATOR_PROMPT = """
 **Tools:**
 - You have a team of two specialist agents available to you as tools:
   1. `google_search_agent`: An expert at performing general web searches for location related information.
-  2. `osm_agent`: An expert at open street map queries. When it finishes geocoding, immediately call its `visualize_geojson` tool to generate an HTML map artifact.
+  2. `osm_agent`: An expert at OSM geocoding and coordinate-based reverse geocoding (nearby places). When it finishes geocoding, immediately call its `visualize_geojson` tool to generate an HTML map artifact.
 
 **Context:**
 - You must synthesize information from BOTH the `google_search_agent` and the `osm_agent` to form your conclusions.
@@ -21,7 +21,10 @@ ORCHESTRATOR_PROMPT = """
 3.  **Delegate Focused Research:**
     - Based on the date, calculate the start and end dates for the entity.
     - Instruct the `google_search_agent` to find additional data like place type, visual sites etc  on the location entity.
-    - Instruct the `osm_agent` to find location candidates for the entity, and once it returns GeoJSON ensure `visualize_geojson` is invoked to produce the interactive map file.
+    - Instruct the `osm_agent` to find location candidates for the entity.
+    - If you already have coordinates (lat/lon), or if geocoding yields a coordinate candidate that must be expanded into nearby places, call the `osm_agent` `reverse_geocoding` tool immediately with that coordinate.
+    - Use `reverse_geocoding` results to refine place-type and proximity matching before final ranking.
+    - Once geocoding returns GeoJSON, ensure `visualize_geojson` is invoked to produce the interactive map file.
 5.  **Synthesize and Create the Final Report:**
     - Review the information provided by **both** specialist agents.
     - Combine, filter, and deduplicate the findings. Your filteres are geographic coordinates and place type matching between the query and the candidate
