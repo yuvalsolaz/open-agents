@@ -97,3 +97,17 @@ python3 -m gir_agent.csv_runner --input-csv sample_batch_input.csv --output-csv 
 ```text
 <all input columns>,agent_output,status,error_message
 ```
+
+### 3) Batch CSV Runner via REST API
+
+- `gir_agent/csv_runner_rest.py`
+- Creates one fresh session per CSV row against a running `adk api_server` and sends the query with `POST /run`
+
+**Example**
+```bash
+python3 -m gir_agent.csv_runner_rest \
+  --base-url http://localhost:8000 \
+  --app-name gir_agent \
+  --input-csv sample_batch_input.csv \
+  --output-csv batch_output_rest.csv
+```
