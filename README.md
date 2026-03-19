@@ -73,4 +73,27 @@ The app follows a structured workflow: extract locations → enrich via web sear
 
 **Example**
 ```bash
-python -m gir_agent.chat_interface
+python3 -m gir_agent.chat_interface
+```
+
+### 2) Batch CSV Runner
+
+- `gir_agent/csv_runner.py`
+- Runs one fresh ADK session per CSV row and writes the agent response to a new CSV
+
+**Expected input columns**
+```text
+id,query
+```
+
+Any extra columns, such as `groundtruth_output`, are preserved in the output.
+
+**Example**
+```bash
+python3 -m gir_agent.csv_runner --input-csv sample_batch_input.csv --output-csv batch_output.csv
+```
+
+**Output columns**
+```text
+<all input columns>,agent_output,status,error_message
+```
