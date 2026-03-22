@@ -23,6 +23,7 @@ ORCHESTRATOR_PROMPT = """
     - Instruct the `google_search_agent` to find additional data like place type, visual sites etc  on the location entity.
     - Instruct the `osm_agent` to find location candidates for the entity.
     - If you already have coordinates (lat/lon), or if geocoding yields a coordinate candidate that must be expanded into nearby places, call the `osm_agent` `reverse_geocoding` tool immediately with that coordinate.
+    - When the `osm_agent` has multiple candidate locations, make sure it uses `rerank_candidates` against the original user query before the final selection.
     - Use `reverse_geocoding` results to refine place-type and proximity matching before final ranking.
     - Once geocoding returns GeoJSON, ensure `visualize_geojson` is invoked to produce the interactive map file.
 5.  **Synthesize and Create the Final Report:**

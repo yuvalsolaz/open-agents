@@ -62,6 +62,11 @@ The app follows a structured workflow: extract locations → enrich via web sear
   - Writes files like: `maps/geo_map_*.html`
   - Saves artifact metadata in state: `user:last_geo_map_path`
 
+- **LLM reranking**
+  - `gir_agent/tools/rerank_tool.py`
+  - Scores multiple geographic candidates against the original user query
+  - Returns the top-ranked candidates with a short rationale
+
 ---
 
 ## Interfaces
